@@ -17,9 +17,13 @@ import { settings } from "./db/schema";
  * encrypted at rest and never sent to the browser (use `getPublicSettings` for UI).
  */
 export const SETTINGS = {
-  /** Instagram app (Meta developer dashboard -> Instagram -> API setup with Instagram login). */
+  /** Meta app (App settings → Basic). Not the old Instagram app id. */
   "meta.appId": { schema: z.string().regex(/^\d{5,25}$/, "Must be a numeric app id"), secret: false },
   "meta.appSecret": { schema: z.string().min(16).max(128), secret: true },
+  /** Facebook Login for Business configuration (`config_id`) from API setup with Unified login. */
+  "meta.configId": { schema: z.string().regex(/^\d{5,25}$/, "Must be a numeric configuration id"), secret: false },
+  /** Client business portfolio id returned by `GET /me?fields=client_business_id` after connect. */
+  "instagram.clientBusinessId": { schema: z.string().regex(/^\d{5,32}$/), secret: false },
   /** Token Meta echoes back when verifying the webhook subscription. Auto-generated. */
   "webhook.verifyToken": { schema: z.string().min(16).max(128), secret: true },
   /** Result of the last `POST /me/subscribed_apps` (Connect or "Re-subscribe webhooks"). Diagnostics only. */

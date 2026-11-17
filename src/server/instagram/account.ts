@@ -4,12 +4,7 @@ import { z } from "zod";
 import { decrypt, encrypt } from "@/server/crypto";
 import { db, retryable } from "@/server/db/client";
 import { instagramAccounts, type InstagramAccount } from "@/server/db/schema";
-import { IG_REFRESH_TOKEN_URL } from "./constants";
 import { graphId, graphRequest } from "./graph";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-/** Refresh when fewer than this many days are left (long-lived tokens last 60 days). */
-export const REFRESH_THRESHOLD_DAYS = 15;
 
 /** The connected (active) Instagram account, or `null` when none is connected. */
 export const getActiveAccount = retryable(
@@ -81,7 +76,7 @@ export async function disconnectAccount(): Promise<void> {
   try {
     await graphRequest({
       method: "DELETE",
-      path: "/me/subscribed_apps",
+      path: `/${encodeURIComponent(account.igUserId)}/subscribed_apps`,
       accessToken: getAccessToken(account),
       schema: z.unknown(),
       retries: 0,
@@ -143,7 +138,7 @@ export async function listMedia(opts: { limit?: number; after?: string | null } 
   if (!account) throw new Error("No Instagram account connected");
   const limit = Math.min(Math.max(Math.trunc(opts.limit ?? 24), 1), 50);
   const page = await graphRequest({
-    path: "/me/media",
+    path: `/${encodeURIComponent(account.igUserId)}/media`,
     accessToken: getAccessToken(account),
     query: {
       fields: "id,caption,media_type,media_product_type,media_url,permalink,thumbnail_url,timestamp",
@@ -180,28 +175,11 @@ export interface RefreshResult {
 }
 
 /**
- * Refreshes the long-lived token when fewer than {@link REFRESH_THRESHOLD_DAYS} days remain (or
- * the expiry is unknown, or `force`). Meta only refreshes tokens that are >= 24h old.
+ * Unified Login tokens are Business Integration System User tokens. They do not use the Instagram
+ * Login refresh endpoint. A token with no expiry is left alone. An expiring token is not rotated
+ * here: renewing it needs `business_management`, which this app does not request. Reconnect before
+ * it ends.
  */
-export async function refreshTokenIfNeeded(
-  account: InstagramAccount,
-  opts: { force?: boolean; now?: Date } = {},
-): Promise<RefreshResult> {
-  const now = opts.now ?? new Date();
-  const expiresAt = account.tokenExpiresAt;
-  const due = !expiresAt || expiresAt.getTime() - now.getTime() < REFRESH_THRESHOLD_DAYS * DAY_MS;
-  if (!opts.force && !due) return { refreshed: false, expiresAt };
-
-  const res = await graphRequest({
-    path: IG_REFRESH_TOKEN_URL,
-    query: { grant_type: "ig_refresh_token" },
-    accessToken: getAccessToken(account),
-    schema: tokenResponseSchema,
-  });
-  const newExpiresAt = res.expires_in ? new Date(now.getTime() + res.expires_in * 1000) : null;
-  await db
-    .update(instagramAccounts)
-    .set({ accessTokenEnc: encrypt(res.access_token), tokenExpiresAt: newExpiresAt, tokenRefreshedAt: now })
-    .where(eq(instagramAccounts.id, account.id));
-  return { refreshed: true, expiresAt: newExpiresAt };
+export async function refreshTokenIfNeeded(account: InstagramAccount): Promise<RefreshResult> {
+  return { refreshed: false, expiresAt: account.tokenExpiresAt };
 }

@@ -39,7 +39,10 @@ async function getSetupState(): Promise<SetupState> {
     countCampaigns(),
   ]);
   return {
-    credentials: !!settings["meta.appId"].value && settings["meta.appSecret"].configured,
+    credentials:
+      !!settings["meta.appId"].value &&
+      !!settings["meta.configId"].value &&
+      settings["meta.appSecret"].configured,
     account: !!account,
     webhook: anyDelivery,
     campaign: campaignCount > 0,

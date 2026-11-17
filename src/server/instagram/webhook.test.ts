@@ -128,6 +128,43 @@ describe("parseWebhookPayload / extractCommentEvents", () => {
     });
   });
 
+  it("reads Unified Login comments, which send comment_id instead of id", () => {
+    const payload = parseWebhookPayload(
+      JSON.stringify({
+        object: "instagram",
+        entry: [
+          {
+            id: "17841400000000000",
+            changes: [
+              {
+                field: "comments",
+                value: {
+                  comment_id: "17900000000000000",
+                  text: "guide",
+                  from: { id: "232323232", username: "commenter" },
+                  parent_id: "17900000000000001",
+                  media: { id: "18000000000000000", media_product_type: "REELS" },
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    )!;
+    expect(extractCommentEvents(payload)).toMatchObject([
+      {
+        commentId: "17900000000000000",
+        text: "guide",
+        igUserId: "17841400000000000",
+        fromId: "232323232",
+        fromUsername: "commenter",
+        mediaId: "18000000000000000",
+        mediaProductType: "REELS",
+        parentId: "17900000000000001",
+      },
+    ]);
+  });
+
   it("ignores other fields, other objects, malformed values and duplicates", () => {
     const payload = parseWebhookPayload(
       JSON.stringify({

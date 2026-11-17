@@ -75,6 +75,7 @@ export type MetaReviewUrls = {
 
 export function InstagramTab(props: {
   appId: string;
+  configId: string;
   appSecretConfigured: boolean;
   account: Account | null;
   webhookUrl: string;
@@ -86,11 +87,12 @@ export function InstagramTab(props: {
   webhookRequests: WebhookRequestView[];
   subscription: SubscriptionStatus | null;
 }) {
-  const configured = !!props.appId && props.appSecretConfigured;
+  const configured = !!props.appId && !!props.configId && props.appSecretConfigured;
   return (
     <div className="grid max-w-3xl grid-cols-1 gap-6">
       <MetaAppCard
         appId={props.appId}
+        configId={props.configId}
         secretConfigured={props.appSecretConfigured}
         redirectUri={props.redirectUri}
       />
@@ -144,16 +146,18 @@ function CopyField({
 
 function MetaAppCard({
   appId,
+  configId,
   secretConfigured,
   redirectUri,
 }: {
   appId: string;
+  configId: string;
   secretConfigured: boolean;
   redirectUri: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [values, setValues] = useState({ appId, appSecret: "" });
+  const [values, setValues] = useState({ appId, configId, appSecret: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
 
   return (
@@ -180,10 +184,11 @@ function MetaAppCard({
         <CardHeader>
           <CardTitle>Meta app</CardTitle>
           <CardDescription>
-            From developers.facebook.com → your app → Instagram → API setup with Instagram login.
+            App settings → Basic for the Meta app ID and secret. Use cases → Manage messaging & content
+            on Instagram → API setup with Unified login for the configuration ID.
           </CardDescription>
           <CardAction>
-            {appId && secretConfigured ? (
+            {appId && configId && secretConfigured ? (
               <Badge variant="success">
                 <CheckCircle2 aria-hidden /> Configured
               </Badge>
@@ -197,7 +202,7 @@ function MetaAppCard({
         <CardContent className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="meta-app-id">Instagram App ID</Label>
+              <Label htmlFor="meta-app-id">Meta App ID</Label>
               <Input
                 id="meta-app-id"
                 inputMode="numeric"
@@ -211,7 +216,7 @@ function MetaAppCard({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="meta-app-secret" className="flex items-center gap-2">
-                Instagram App Secret
+                Meta App Secret
                 {secretConfigured ? (
                   <span className="text-success inline-flex items-center gap-1 text-xs font-normal">
                     <ShieldCheck className="size-3.5" aria-hidden /> stored encrypted
@@ -233,11 +238,29 @@ function MetaAppCard({
               <FieldError id="meta-app-secret-error" errors={errors.appSecret} />
             </div>
           </div>
+          <div className="grid gap-2">
+            <Label htmlFor="meta-config-id">Configuration ID</Label>
+            <Input
+              id="meta-config-id"
+              inputMode="numeric"
+              autoComplete="off"
+              value={values.configId}
+              onChange={(e) => setValues((v) => ({ ...v, configId: e.target.value }))}
+              aria-invalid={!!errors.configId}
+              aria-describedby={errors.configId ? "meta-config-id-error" : "meta-config-id-help"}
+            />
+            <p id="meta-config-id-help" className="text-muted-foreground text-xs">
+              The <span className="font-mono">config_id</span> from API setup with Unified login. It is not
+              a secret. The configuration must include instagram_basic, instagram_manage_comments, and
+              instagram_manage_messages.
+            </p>
+            <FieldError id="meta-config-id-error" errors={errors.configId} />
+          </div>
           <CopyField
             id="oauth-redirect"
             label="OAuth redirect URI"
             value={redirectUri}
-            help="Add this under “Valid OAuth Redirect URIs” in the Instagram business login settings."
+            help="Paste this as the Redirect URL on the Unified Login configuration, exactly."
           />
         </CardContent>
         <CardFooter className="justify-end border-t">
@@ -261,7 +284,8 @@ function ConnectionCard({ account, configured }: { account: Account | null; conf
       <CardHeader>
         <CardTitle>Instagram account</CardTitle>
         <CardDescription>
-          A professional (Business or Creator) account. Tokens refresh automatically every day.
+          A professional (Business or Creator) account. You can sign in with Instagram or Facebook, then
+          choose a business portfolio and the Instagram account to share.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -284,8 +308,8 @@ function ConnectionCard({ account, configured }: { account: Account | null; conf
                 ) : null}
                 <p className="text-muted-foreground text-xs">
                   {account.tokenExpiresAt
-                    ? `Token valid until ${formatDateTime(account.tokenExpiresAt)}${daysLeft !== null ? ` (${daysLeft} days)` : ""}`
-                    : "Token expiry unknown"}
+                    ? `Token valid until ${formatDateTime(account.tokenExpiresAt)}${daysLeft !== null ? ` (${daysLeft} days)` : ""}. Reconnect before it ends.`
+                    : "Token does not expire. It stops if the app is removed from the business portfolio."}
                 </p>
               </div>
             </div>
@@ -345,8 +369,8 @@ function ConnectionCard({ account, configured }: { account: Account | null; conf
               <p className="font-medium">Not connected</p>
               <p className="text-muted-foreground text-sm">
                 {configured
-                  ? "You'll be sent to Instagram to approve access."
-                  : "Save your Meta app credentials above first."}
+                  ? "You'll choose Instagram or Facebook, then the business portfolio and Instagram account."
+                  : "Save your Meta app ID, secret, and configuration ID first."}
               </p>
             </div>
             {configured ? (
@@ -480,10 +504,14 @@ function WebhookCard({
           </div>
         </div>
         <ol className="text-muted-foreground grid list-decimal gap-1.5 pl-5 text-sm marker:font-medium">
-          <li>In your Meta app open Instagram → API setup with Instagram login → Configure webhooks.</li>
+          <li>
+            In the Meta app open Webhooks, select the Instagram object (or Configure webhooks on API setup
+            with Unified login).
+          </li>
           <li>Paste the callback URL and verify token, then click “Verify and save”.</li>
           <li>
-            Subscribe to the <code className="text-foreground">comments</code> field.
+            Subscribe to the <code className="text-foreground">comments</code> and{" "}
+            <code className="text-foreground">messaging_postbacks</code> fields.
           </li>
           <li>
             Connect your account above (this also subscribes it to webhooks), then comment on a post from a{" "}
@@ -570,8 +598,7 @@ function MetaReviewCard({ urls, contactConfigured }: { urls: MetaReviewUrls; con
               Business login settings
             </h3>
             <p className="text-muted-foreground text-xs">
-              Instagram → API setup with Instagram login → Set up Instagram business login → Business login
-              settings.
+              App Dashboard → Facebook Login for Business → Settings, or the Unified Login configuration.
             </p>
           </div>
           <CopyField

@@ -6,6 +6,11 @@ export const metaAppSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{5,25}$/, "The App ID is a number (5–25 digits)"),
+  /** Facebook Login for Business configuration id from API setup with Unified login. */
+  configId: z
+    .string()
+    .trim()
+    .regex(/^\d{5,25}$/, "The configuration ID is a number (5–25 digits)"),
   /** Write-only: blank keeps the stored secret. */
   appSecret: z
     .string()

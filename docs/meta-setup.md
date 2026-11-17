@@ -15,8 +15,9 @@ so you stay in full control of your data.
   _Settings → Account type and tools → Switch to professional account_.
 - In the Instagram app: _Settings → Messages and story replies → Message controls → Connected tools →
   Allow access to messages_ **ON**. Without it every DM fails.
-- A **Facebook account** to log in to developers.facebook.com (a Facebook Page is **not** required for
-  the "Instagram Login" flow this app uses).
+- A **Facebook account** to log in to developers.facebook.com. A Facebook Page is **not** required.
+  The app uses **Instagram API with Unified Login**: you sign in with Instagram or Facebook and choose
+  a business portfolio. The Meta app itself must be owned by a business portfolio.
 - Your app deployed and reachable over **HTTPS** (see [deployment.md](deployment.md)). Meta cannot call
   `localhost`; for local testing use a tunnel such as `cloudflared` or `ngrok`.
 - You have logged in to the app and changed the default password.
@@ -25,10 +26,11 @@ Throughout, `{APP_URL}` is your public URL, e.g. `https://my-replies.vercel.app`
 
 | Value                                                        | You will paste it into                   |
 | ------------------------------------------------------------ | ---------------------------------------- |
-| OAuth redirect URI: `{APP_URL}/api/instagram/oauth/callback` | Meta dashboard → Business login settings |
-| Webhook callback URL: `{APP_URL}/api/webhooks/instagram`     | Meta dashboard → Webhooks                |
-| Verify token (shown in **Settings → Instagram**)             | Meta dashboard → Webhooks                |
-| Meta App ID and App Secret                                   | **Settings → Instagram** in the app      |
+| OAuth redirect URI: `{APP_URL}/api/instagram/oauth/callback` | Unified Login configuration → Redirect URL |
+| Webhook callback URL: `{APP_URL}/api/webhooks/instagram`     | Webhooks → Instagram object              |
+| Verify token (shown in **Settings → Instagram**)             | Webhooks → Instagram object              |
+| Meta App ID and App Secret (App settings → Basic)           | **Settings → Instagram** in the app      |
+| Configuration ID (`config_id`)                               | **Settings → Instagram** in the app      |
 
 The app shows the callback URL and the verify token with copy buttons so you do not have to type them.
 
@@ -41,43 +43,42 @@ The app shows the callback URL and the verify token with copy buttons so you do 
 4. When asked for a use case, choose **Other** (or the option about "Manage messaging & content on
    Instagram" if shown - ⚠ verify, Meta renames use cases regularly). Then choose the app type
    **Business**. Click **Next**, then **Create app**.
-5. On the app dashboard, find **Add products** (or _Products_ in the left menu) and add **Instagram**.
-   Open **Instagram → API setup with Instagram login**. In newer dashboards the same page is under
-   **Use cases → Manage messaging & content on Instagram → Customize**.
+5. The app must be owned by a **business portfolio**. Use case: **Manage messaging & content on
+   Instagram**. Open **Use cases → Manage messaging & content on Instagram → Customize → API setup
+   with Unified login**. Newly created apps cannot use API setup with Instagram login.
 
-## Part 2 - Permissions
+## Part 2 - Configuration and permissions
 
-On the **API setup with Instagram login** page, step "Generate access tokens" lists the permissions.
-This app needs three:
+On **API setup with Unified login**, create a configuration. It is a Facebook Login for Business
+configuration. Its id is the `config_id`.
 
-| Permission                           | Used for                                            |
-| ------------------------------------ | --------------------------------------------------- |
-| `instagram_business_basic`           | Read your profile and your media list (post picker) |
-| `instagram_business_manage_comments` | Read comments, post public replies                  |
-| `instagram_business_manage_messages` | Send the private reply (DM)                         |
+Edit permissions so the configuration includes these three. Do not rely on the old
+`instagram_business_*` names:
 
-The app requests exactly these during **Connect Instagram**. ⚠ verify: Meta's current Private Replies
-page lists `instagram_business_basic` + `instagram_business_manage_comments` as requirements, and
-treats `instagram_business_manage_messages` as the messaging permission. Requesting all three is the
-safe choice and is what the app does.
+| Permission                   | Used for                                            |
+| ---------------------------- | --------------------------------------------------- |
+| `instagram_basic`            | Read your profile and your media list (post picker) |
+| `instagram_manage_comments`  | Read comments, post public replies                  |
+| `instagram_manage_messages`  | Send the private reply (DM)                         |
+
+`instagram_basic` and `instagram_manage_messages` are required by the configuration. Ads permissions
+are optional; this app does not use them. Choose a **system-user access token**. Leave it set to not
+expire. An ad account is optional and can be skipped at login.
+
+Under **Redirect URL**, paste `{APP_URL}/api/instagram/oauth/callback` exactly and save. Copy the
+configuration ID.
 
 ## Part 3 - Enter the app credentials in the app
 
 1. In the Meta dashboard open **App settings → Basic**. Copy the **App ID** and click **Show** next to
-   **App Secret** (re-enter your Facebook password if prompted).
-   - ⚠ verify: on the _Instagram → API setup_ page Meta also shows a separate **Instagram app ID** and
-     **Instagram app secret**. For Instagram Login, **use the Instagram app ID/secret shown on the API
-     setup page** if they differ from App settings → Basic.
-2. In AutoDM go to **Settings → Instagram**, paste **Meta App ID** and **App Secret**, and save.
-   The secret is encrypted at rest and never shown again.
+   **App Secret**. Use these Meta app credentials, not an Instagram app ID or secret.
+2. In AutoDM go to **Settings → Instagram**. Paste **Meta App ID**, **Meta App Secret**, and
+   **Configuration ID**, then save. The secret is encrypted at rest and never shown again.
 
 ## Part 4 - OAuth redirect URI
 
-1. In the Meta dashboard open **Instagram → API setup with Instagram login → 3. Set up Instagram
-   business login** and click **Business login settings**.
-2. Under **OAuth redirect URIs** add exactly:
-   `{APP_URL}/api/instagram/oauth/callback`
-3. Save. The URI must match **character for character** (https, no trailing slash).
+The redirect URI is saved on the Unified Login configuration in Part 2. It must match
+`{APP_URL}/api/instagram/oauth/callback` character for character (https, no trailing slash).
 
 ## Part 5 - Add your Instagram account as a tester (Development mode)
 
@@ -93,14 +94,18 @@ New apps start in **Development mode**: only people with a role on the app can u
 ## Part 6 - Connect Instagram
 
 1. In AutoDM: **Settings → Instagram → Connect Instagram**.
-2. Log in to Instagram and **Allow** all three permissions.
-3. You return to the app and see your username. Behind the scenes the app exchanges the code for a
-   short-lived token, upgrades it to a **long-lived (~60 days)** token, encrypts it, and subscribes
-   your account to the `comments` and `messaging_postbacks` webhook fields (`POST /me/subscribed_apps`).
+2. Sign in with Instagram or Facebook. Choose the business portfolio and the Instagram account to
+   share, then allow the permissions.
+3. You return to the app and see your username. The app exchanges the code for a Business Integration
+   System User access token, reads the Instagram account from `/me/assigned_instagram_accounts`,
+   encrypts the token, and subscribes that account
+   (`POST graph.facebook.com/{ig-user-id}/subscribed_apps`).
 
 ## Part 7 - Webhook setup
 
-1. In the Meta dashboard open **Instagram → API setup with Instagram login → 2. Configure webhooks**.
+1. In the Meta dashboard open **Webhooks**, select the **Instagram** object. Unified Login does not
+   use the callback saved under API setup with Instagram login. The same page is also **Configure
+   webhooks** on **API setup with Unified login**.
 2. **Callback URL**: `{APP_URL}/api/webhooks/instagram`
    **Verify token**: copy it from **Settings → Instagram** in the app.
 3. Click **Verify and save**. Meta sends a `GET` with `hub.challenge`; the app answers if the token
@@ -139,8 +144,8 @@ serves both; **Settings → Instagram → Meta app review** lists all four URLs 
    - **User data deletion**: choose **Data deletion instructions URL** and paste
      `{APP_URL}/data-deletion`
    - also set a **Category** and an app icon (1024x1024), then save.
-3. Meta dashboard → **Instagram → API setup with Instagram login → 3. Set up Instagram business
-   login → Business login settings**:
+3. Meta dashboard → **Facebook Login for Business → Settings** (deauthorize and data deletion
+   callbacks):
    - **Deauthorize callback URL**: `{APP_URL}/api/instagram/deauthorize` - called when someone
      removes your app; if it's the connected account, its token is wiped and it is disconnected.
    - **Data deletion request URL**: `{APP_URL}/api/instagram/data-deletion` - called when someone
@@ -178,8 +183,8 @@ general public (non-testers) reach your webhook:
   for comments by anyone. Other reports say Meta requires Advanced Access for `comments` webhooks.
   **We could not confirm either from primary sources.** Test it: switch to Live, comment from a
   second account that is _not_ a tester, and check **Activity** in the app.
-- If webhooks do not arrive, request Advanced Access for `instagram_business_manage_comments` and
-  `instagram_business_manage_messages`: dashboard → **App Review → Permissions and features**. Expect to
+- If webhooks do not arrive, request Advanced Access for `instagram_manage_comments` and
+  `instagram_manage_messages`: dashboard → **App Review → Permissions and features**. Expect to
   provide a screencast, a privacy policy and (for Advanced Access) **Business Verification**
   (Business settings → Security centre). Reviews can take days to weeks.
 
@@ -219,14 +224,14 @@ Verified against Meta's Private Replies documentation and secondary sources:
 
 ## Part 10 - Tokens
 
-- Short-lived token: ~1 hour. Long-lived token: **~60 days** (⚠ verify). Refresh with
-  `GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=...`;
-  the token must be at least 24 hours old and not expired. Each refresh gives a fresh 60 days.
-- The app does this automatically with a **daily Vercel Cron** (`/api/cron/refresh-tokens`, protected
-  by `CRON_SECRET`). If it ever fails (app asleep for 60+ days), just click **Connect Instagram** again.
-- Graph API version: the Instagram Login host `graph.instagram.com` accepts versioned paths; at the
-  time of writing the latest is reported as **v25.0** (⚠ verify at
-  <https://developers.facebook.com/docs/graph-api/changelog>). The app pins one version in code.
+- The connect button returns a **Business Integration System User access token**. It belongs to the
+  business portfolio, not the person who logged in. Leave the configuration set so the token does
+  not expire. It stops working if the app is removed from that portfolio or the Instagram account
+  moves to another portfolio; connect again in that case.
+- The daily cron still deletes old comment records. It does not refresh this token. The old
+  `graph.instagram.com/refresh_access_token` call does not apply.
+- API host: `graph.facebook.com` version **v27.0**. `/me` is the system user. Media, messages, and
+  webhook subscription use the Instagram professional account id.
 
 ## Is it free and unlimited?
 
@@ -249,7 +254,7 @@ paywalled features. Hosting runs on the free tiers of Vercel Hobby and Supabase 
 
 - [ ] Professional IG account
 - [ ] Meta app (Business type) with Instagram product
-- [ ] App ID + Secret saved in **Settings → Instagram**
+- [ ] Meta App ID, App Secret, and configuration ID saved in **Settings → Instagram**
 - [ ] Redirect URI `{APP_URL}/api/instagram/oauth/callback` whitelisted
 - [ ] IG account added as Instagram Tester and invite accepted
 - [ ] **Connect Instagram** done

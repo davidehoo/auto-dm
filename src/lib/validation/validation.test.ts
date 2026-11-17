@@ -237,8 +237,13 @@ describe("activityFiltersSchema", () => {
 
 describe("metaAppSchema", () => {
   it("allows a blank secret (keep stored) but validates a provided one", () => {
-    expect(metaAppSchema.safeParse({ appId: "123456789", appSecret: "" }).success).toBe(true);
-    expect(metaAppSchema.safeParse({ appId: "123456789", appSecret: "short" }).success).toBe(false);
-    expect(metaAppSchema.safeParse({ appId: "abc" }).success).toBe(false);
+    expect(metaAppSchema.safeParse({ appId: "123456789", configId: "987654321", appSecret: "" }).success).toBe(
+      true,
+    );
+    expect(metaAppSchema.safeParse({ appId: "123456789", configId: "987654321", appSecret: "short" }).success).toBe(
+      false,
+    );
+    expect(metaAppSchema.safeParse({ appId: "abc", configId: "987654321" }).success).toBe(false);
+    expect(metaAppSchema.safeParse({ appId: "123456789", configId: "nope" }).success).toBe(false);
   });
 });

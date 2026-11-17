@@ -65,7 +65,7 @@ describe("nextCommentsCursor", () => {
 });
 
 describe("fetchRecentComments", () => {
-  it("follows the after cursor on graph.instagram.com, never the paging.next URL", async () => {
+  it("follows the after cursor on graph.facebook.com, never the paging.next URL", async () => {
     const fetchMock = vi.fn<FetchFn>(async (url) =>
       url.searchParams.get("after") === "P2"
         ? json({ data: [c("2", "2026-10-17T00:00:00+0000")] })

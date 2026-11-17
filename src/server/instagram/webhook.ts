@@ -42,14 +42,28 @@ export function checkVerifyRequest(params: URLSearchParams, expectedToken: strin
 
 const id = z.union([z.string().min(1), z.number().int()]).transform(String);
 
-/** `value` of a `comments` change. Unknown keys are stripped, not rejected. */
-export const commentValueSchema = z.object({
-  id,
-  text: z.string().optional(),
-  from: z.object({ id, username: z.string().optional() }),
-  media: z.object({ id, media_product_type: z.string().optional() }).optional(),
-  parent_id: id.optional(),
-});
+/**
+ * `value` of a `comments` change. Instagram Login sends `id`; Unified Login sends `comment_id`.
+ * Unknown keys are stripped, not rejected.
+ */
+export const commentValueSchema = z
+  .object({
+    id: id.optional(),
+    comment_id: id.optional(),
+    text: z.string().optional(),
+    from: z.object({ id, username: z.string().optional() }),
+    media: z
+      .object({
+        id,
+        media_product_type: z.string().optional(),
+        ad_id: id.optional(),
+        original_media_id: id.optional(),
+      })
+      .optional(),
+    parent_id: id.optional(),
+  })
+  .refine((v) => Boolean(v.comment_id ?? v.id))
+  .transform((v) => ({ ...v, id: (v.comment_id ?? v.id)! }));
 
 export const webhookPayloadSchema = z.object({
   object: z.string(),

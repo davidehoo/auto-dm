@@ -152,14 +152,15 @@ Short version below; screenshots-level detail and explanations are in [meta-setu
 
 1. <https://developers.facebook.com/apps> → **Create app**. Any name.
 2. Use case: **Manage messaging & content on Instagram** (if not listed: **Other → Business**).
-3. In the app dashboard open **Instagram → API setup with Instagram login**. (Newer dashboards:
-   **Use cases → Manage messaging & content on Instagram → Customize → API setup with Instagram login**.)
-4. Copy the **Instagram app ID** and **Instagram app secret** shown on that page.
-5. In your app: **Settings → Instagram → Meta app** → paste them into **Instagram App ID** and
-   **Instagram App Secret** → save. The secret shows "stored encrypted".
-6. Back in Meta, same page → **3. Set up Instagram business login → Business login settings →
-   OAuth redirect URIs**: add `https://<domain>/api/instagram/oauth/callback` exactly (copy it from
-   Settings → Instagram). Save.
+3. In the app dashboard open **Use cases → Manage messaging & content on Instagram → Customize →
+   API setup with Unified login**. The app must belong to a business portfolio.
+4. Create a configuration with `instagram_basic`, `instagram_manage_comments`, and
+   `instagram_manage_messages`, and a system-user token that does not expire. Copy the **Meta app ID**
+   and **Meta app secret** from **App settings → Basic**, and the configuration ID.
+5. In your app: **Settings → Instagram** → paste the Meta App ID, Meta App Secret, and configuration
+   ID → save. The secret shows "stored encrypted".
+6. On the Unified Login configuration, set the redirect URL to
+   `https://<domain>/api/instagram/oauth/callback` exactly (copy it from Settings → Instagram). Save.
 7. **App roles → Roles → Add people → Instagram Tester** → your Instagram username. Then accept the
    invite in Instagram: **Settings → Website permissions → Apps and websites → Tester invites →
    Accept** (on the web: instagram.com → Settings → Apps and websites).
@@ -167,15 +168,16 @@ Short version below; screenshots-level detail and explanations are in [meta-setu
 ## 8. Connect Instagram
 
 1. App → **Settings → Instagram → Instagram account → Connect Instagram**.
-2. Log in and click **Allow** for all permissions.
-3. You come back to Settings with your username and picture. The token is stored encrypted and
-   refreshed daily by the cron job (it needs `CRON_SECRET`).
+2. Sign in with Instagram or Facebook, choose the business portfolio and Instagram account, and allow
+   the permissions.
+3. You come back to Settings with your username and picture. The token is stored encrypted. A
+   system-user token set not to expire stays valid until the app is removed from the portfolio.
 
 ## 9. Connect the webhook
 
 This tells Meta where to send new comments.
 
-1. Meta → **Instagram → API setup with Instagram login → 2. Configure webhooks**.
+1. Meta → **Webhooks → Instagram** (or **API setup with Unified login → Configure webhooks**).
 2. **Callback URL**: copy from app **Settings → Instagram → Webhook → Callback URL**
    (`https://<domain>/api/webhooks/instagram`).
 3. **Verify token**: copy from the same card (**Copy verify token**).
@@ -214,7 +216,7 @@ provides both:
 2. **Settings → Instagram → Meta app review** lists the URLs. Paste the **Privacy Policy URL**
    (`/privacy`), **Terms of Service URL** (`/terms`) and **Data deletion instructions URL**
    (`/data-deletion`) into Meta → **App settings → Basic**, and the **Deauthorize callback URL** and **Data deletion request URL** into
-   **Instagram → API setup with Instagram login → Business login settings**.
+   **Facebook Login for Business → Settings**.
 
 Steps and the honest state of what Meta requires:
 [meta-setup.md → Part 8](meta-setup.md#part-8---development-vs-live-mode-important).

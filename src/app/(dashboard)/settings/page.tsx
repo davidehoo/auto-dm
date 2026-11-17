@@ -28,13 +28,14 @@ export const metadata: Metadata = { title: "Settings" };
 const TABS = ["account", "instagram", "processing", "n8n", "about"] as const;
 
 const OAUTH_ERRORS: Record<string, string> = {
-  missing_app_credentials: "Add your Meta App ID and App Secret first.",
-  access_denied: "Instagram authorization was cancelled.",
+  missing_app_credentials: "Add your Meta App ID, App Secret, and configuration ID first.",
+  access_denied: "Login was cancelled.",
   invalid_state: "The connection request expired or was tampered with. Please try again.",
-  missing_code: "Instagram didn't return an authorization code. Please try again.",
+  missing_code: "Meta didn't return an authorization code. Please try again.",
   missing_permissions: "Some permissions were not granted. Allow all requested permissions and try again.",
-  token_exchange_failed: "Couldn't exchange the authorization code. Check the App Secret and redirect URI.",
-  profile_fetch_failed: "Connected, but couldn't read the account profile. Please try again.",
+  token_exchange_failed: "Couldn't exchange the authorization code. Check the Meta App Secret and redirect URI.",
+  profile_fetch_failed: "Connected, but couldn't read the Instagram account. Please try again.",
+  no_instagram_account: "Login finished, but no Instagram account was shared. Choose an Instagram account and try again.",
 };
 
 export default async function SettingsPage({
@@ -112,6 +113,7 @@ export default async function SettingsPage({
         <TabsContent value="instagram">
           <InstagramTab
             appId={settings["meta.appId"].value ?? ""}
+            configId={settings["meta.configId"].value ?? ""}
             appSecretConfigured={settings["meta.appSecret"].configured}
             account={
               account

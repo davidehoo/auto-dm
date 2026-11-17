@@ -126,7 +126,7 @@ describe("graphRequest", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
-        throw new TypeError("fetch failed https://graph.instagram.com/me?access_token=SECRET");
+        throw new TypeError("fetch failed https://graph.facebook.com/me?access_token=SECRET");
       }),
     );
     const err = (await graphRequest({
